@@ -1,5 +1,9 @@
 import logging
+from homeassistant import config_entries
+import voluptuous as vol
+from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
+import homeassistant.helpers.config_validation as cv
 from .const import DOMAIN
 from .cync_hub import CyncUserData
 
@@ -22,7 +26,37 @@ class CyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_select_switches(self, user_input=None):
         """Step to allow selection of switches, sensors, etc."""
         try:
-            # Validate WiFi connected devices
+            # Log the initial data for debugging purposes
+            _LOGGER.debug(f"self.entry: {getattr(self, 'entry', None)}")
+            _LOGGER.debug(f"self.entry.data: {getattr(self.entry, 'data', None)}")
+
+            # Check if self.entry and self.entry.data exist
+            if not hasattr(self, 'entry') or not hasattr(self.entry, 'data'):
+                _LOGGER.error("self.entry or self.entry.data is missing.")
+                raise KeyError("entry or entry.data")
+
+            # Validate the presence of 'cync_config'
+            if 'cync_config' not in self.entry.data:
+                _LOGGER.error("Missing 'cync_config' key in entry data: %s", self.entry.data)
+                raise KeyError("cync_config")
+
+            cync_config = self.entry.data['cync_config']
+
+            # Check if 'rooms' exists in 'cync_config'
+            if 'rooms' not in cync_config:
+                _LOGGER.error("'rooms' key missing in 'cync_config': %s", cync_config)
+                raise KeyError("rooms")
+
+            rooms = cync_config['rooms']
+
+            # Check if 'devices' exists in 'cync_config'
+            if 'devices' not in cync_config:
+                _LOGGER.error("'devices' key missing in 'cync_config': %s", cync_config)
+                raise KeyError("devices")
+
+            devices = cync_config['devices']
+
+            # Proceed to check for WiFi connected devices
             valid_devices = self._get_wifi_connected_devices()
 
             _LOGGER.debug(f"Valid devices: {valid_devices}")
@@ -34,21 +68,7 @@ class CyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     "Invalid or unsupported Cync configuration, please ensure there is at least one WiFi connected Cync device in your Home(s)."
                 )
 
-            # Check if 'cync_config' key exists in entry data
-            if 'cync_config' not in self.entry.data:
-                _LOGGER.error("Missing 'cync_config' in entry data.")
-                _LOGGER.debug(f"self.entry.data: {self.entry.data}")
-                raise KeyError("cync_config")
-
-            # Check if 'rooms' key exists in 'cync_config'
-            if 'rooms' not in self.entry.data["cync_config"]:
-                _LOGGER.error("'rooms' key missing in 'cync_config'.")
-                _LOGGER.debug(f"self.entry.data['cync_config']: {self.entry.data['cync_config']}")
-                raise KeyError("rooms")
-
-            rooms = self.entry.data["cync_config"]["rooms"]
-            _LOGGER.debug(f"Rooms data: {rooms}")
-
+            # Generate the form schema for selecting switches and sensors
             switches_data_schema = vol.Schema(
                 {
                     vol.Optional("rooms", description={"suggested_value": []}): cv.multi_select({
@@ -102,33 +122,10 @@ class CyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return valid_devices
 
-# Ensure that 'self.entry' and 'self.entry.data' exist and have values
-if not hasattr(self, 'entry') or not hasattr(self.entry, 'data'):
-    _LOGGER.error("self.entry or self.entry.data is missing.")
-    raise KeyError("entry or entry.data")
+    def _is_valid_device(self, device_info, property_key):
+        """Check if the device has the required property."""
+        return device_info.get(property_key, None)
 
-# Check if 'cync_config' exists in the data
-if 'cync_config' not in self.entry.data:
-    _LOGGER.error("Missing 'cync_config' key in entry data: %s", self.entry.data)
-    raise KeyError("cync_config")
-
-cync_config = self.entry.data['cync_config']
-
-# Check if 'rooms' exists in 'cync_config'
-if 'rooms' not in cync_config:
-    _LOGGER.error("'rooms' key missing in 'cync_config': %s", cync_config)
-    raise KeyError("rooms")
-
-rooms = cync_config['rooms']
-
-# Check if 'devices' exists in 'cync_config'
-if 'devices' not in cync_config:
-    _LOGGER.error("'devices' key missing in 'cync_config': %s", cync_config)
-    raise KeyError("devices")
-
-devices = cync_config['devices']
-
-# Continue with further logic...
 
 class InvalidCyncConfiguration(HomeAssistantError):
     """Error to indicate invalid Cync configuration."""
