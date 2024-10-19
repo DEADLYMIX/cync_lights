@@ -24,15 +24,28 @@ class CyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         
         try:
             valid_devices = self._get_wifi_connected_devices()
-            
-            # Log the devices detected
-            _LOGGER.debug(f"Detected valid WiFi devices: {valid_devices}")
+
+            # Debugging logs to help identify missing key issues
+            _LOGGER.debug(f"Valid devices: {valid_devices}")
+            _LOGGER.debug(f"Entry data: {self.entry.data}")
 
             if not valid_devices:
                 raise InvalidCyncConfiguration(
                     "Invalid or unsupported Cync configuration, please ensure there is at least one WiFi connected Cync device in your Home(s)."
                 )
 
+            # Log the keys present in the entry data
+            _LOGGER.debug(f"Keys in entry data: {self.entry.data.keys()}")
+
+            # Ensure the 'cync_config' key exists before accessing it
+            if 'cync_config' not in self.entry.data:
+                raise InvalidCyncConfiguration("Missing 'cync_config' in entry data")
+
+            # Ensure the 'rooms' key exists in 'cync_config'
+            if 'rooms' not in self.entry.data["cync_config"]:
+                raise InvalidCyncConfiguration("Missing 'rooms' key in 'cync_config'")
+
+            # Now we access 'rooms' data safely
             switches_data_schema = vol.Schema(
                 {
                     vol.Optional("rooms", description={"suggested_value": []}): cv.multi_select({
@@ -60,8 +73,8 @@ class CyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         except KeyError as e:
             missing_key = str(e)
-            _LOGGER.error(f"KeyError: Missing key {missing_key} in device configuration")
-            raise InvalidCyncConfiguration(f"Device configuration is missing a key: {missing_key}")
+            _LOGGER.error(f"KeyError: Missing or empty key '{missing_key}' in device configuration")
+            raise InvalidCyncConfiguration(f"Device configuration is missing or has an empty key: {missing_key}")
 
         except Exception as e:
             _LOGGER.error(f"Unexpected error in configuration: {str(e)}")
@@ -71,14 +84,14 @@ class CyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     def _get_wifi_connected_devices(self):
         """Filter and return only devices that are connected via WiFi."""
-        devices = self.entry.data["cync_config"]["devices"]
+        devices = self.entry.data.get("cync_config", {}).get("devices", {})
         valid_devices = {}
-        
+
         for device_id, device_info in devices.items():
             # Log each device's WiFi properties
             _LOGGER.debug(f"Inspecting device: {device_info.get('name', 'unknown')}")
             _LOGGER.debug(f"WiFi MAC: {device_info.get('wifiMac')}, WiFi SSID: {device_info.get('wifiSsid')}, Online: {device_info.get('is_online')}")
-            
+
             # Check for WiFi MAC, SSID, and if the device is online
             if device_info.get('wifiMac') and device_info.get('wifiSsid') and device_info.get('is_online', False):
                 valid_devices[device_id] = device_info
