@@ -35,21 +35,26 @@ class CyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     "Invalid or unsupported Cync configuration, please ensure there is at least one WiFi connected Cync device in your Home(s)."
                 )
 
-            # Log the keys present in the entry data
-            if not self.entry.data:
-                _LOGGER.error(f"self.entry.data is None or empty: {self.entry.data}")
-
-            _LOGGER.debug(f"Keys in entry data: {self.entry.data.keys() if self.entry.data else 'No keys available'}")
+            # Ensure that self.entry is not None and contains valid data
+            if not self.entry or not self.entry.data:
+                _LOGGER.error(f"self.entry is None or empty. Entry data: {self.entry}")
+                raise InvalidCyncConfiguration("self.entry is missing or has no data")
 
             # Ensure the 'cync_config' key exists before accessing it
             if 'cync_config' not in self.entry.data:
                 _LOGGER.error(f"'cync_config' key missing from entry data: {self.entry.data}")
                 raise InvalidCyncConfiguration("Missing 'cync_config' in entry data")
 
+            # Log all keys in cync_config
+            _LOGGER.debug(f"Keys in cync_config: {self.entry.data['cync_config'].keys()}")
+
             # Ensure the 'rooms' key exists in 'cync_config'
             if 'rooms' not in self.entry.data["cync_config"]:
                 _LOGGER.error(f"'rooms' key missing in 'cync_config': {self.entry.data['cync_config']}")
                 raise InvalidCyncConfiguration("Missing 'rooms' key in 'cync_config'")
+
+            # Log keys in 'rooms' to identify potential issues
+            _LOGGER.debug(f"Keys in rooms: {self.entry.data['cync_config']['rooms'].keys()}")
 
             # Now we access 'rooms' data safely
             switches_data_schema = vol.Schema(
@@ -79,7 +84,8 @@ class CyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         except KeyError as e:
             missing_key = str(e)
-            _LOGGER.error(f"KeyError: Missing or empty key '{missing_key}' in device configuration")
+            _LOGGER.error(f"KeyError: Missing or empty key '{missing_key}' in device configuration at line 105")
+            _LOGGER.debug(f"self.entry.data at KeyError: {self.entry.data}")
             raise InvalidCyncConfiguration(f"Device configuration is missing or has an empty key: {missing_key}")
 
         except Exception as e:
