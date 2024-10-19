@@ -102,9 +102,33 @@ class CyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return valid_devices
 
-    def _is_valid_device(self, device_info, property_key):
-        """Check if the device has the required property."""
-        return device_info.get(property_key, None)
+# Ensure that 'self.entry' and 'self.entry.data' exist and have values
+if not hasattr(self, 'entry') or not hasattr(self.entry, 'data'):
+    _LOGGER.error("self.entry or self.entry.data is missing.")
+    raise KeyError("entry or entry.data")
+
+# Check if 'cync_config' exists in the data
+if 'cync_config' not in self.entry.data:
+    _LOGGER.error("Missing 'cync_config' key in entry data: %s", self.entry.data)
+    raise KeyError("cync_config")
+
+cync_config = self.entry.data['cync_config']
+
+# Check if 'rooms' exists in 'cync_config'
+if 'rooms' not in cync_config:
+    _LOGGER.error("'rooms' key missing in 'cync_config': %s", cync_config)
+    raise KeyError("rooms")
+
+rooms = cync_config['rooms']
+
+# Check if 'devices' exists in 'cync_config'
+if 'devices' not in cync_config:
+    _LOGGER.error("'devices' key missing in 'cync_config': %s", cync_config)
+    raise KeyError("devices")
+
+devices = cync_config['devices']
+
+# Continue with further logic...
 
 class InvalidCyncConfiguration(HomeAssistantError):
     """Error to indicate invalid Cync configuration."""
