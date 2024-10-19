@@ -8,7 +8,7 @@ If anyone has devices that don't work with this integration (aside from thermost
 
 ## Installation
 1. Navigate to HACS and add a custom repository. 
-   URL: https://github.com/nikshriv/cync_lights 
+   URL: https://github.com/DEADLYMIX/cync_lights
    Category: Integration
 2. Install and restart HA
 3. Close your browser and reopen it, then Navigate back to your HA instance. (This is an issue with HACs)
