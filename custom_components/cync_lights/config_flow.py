@@ -41,17 +41,17 @@ class CyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         if room_info.get('isSubgroup', False)
                     }),
                     vol.Optional("switches", description={"suggested_value": []}): cv.multi_select({
-                        switch_id: f"{sw_info['name']} ({sw_info['room_name']}: {sw_info['home_name']})"
+                        switch_id: f"{sw_info.get('name', 'unknown')} ({sw_info.get('room_name', 'unknown')}: {sw_info.get('home_name', 'unknown')})"
                         for switch_id, sw_info in valid_devices.items()
                         if self._is_valid_device(sw_info, 'ONOFF')
                     }),
                     vol.Optional("motion_sensors", description={"suggested_value": []}): cv.multi_select({
-                        device_id: f"{device_info['name']} ({device_info['room_name']}: {device_info['home_name']})"
+                        device_id: f"{device_info.get('name', 'unknown')} ({device_info.get('room_name', 'unknown')}: {device_info.get('home_name', 'unknown')})"
                         for device_id, device_info in valid_devices.items()
                         if self._is_valid_device(device_info, 'MOTION')
                     }),
                     vol.Optional("ambient_light_sensors", description={"suggested_value": []}): cv.multi_select({
-                        device_id: f"{device_info['name']} ({device_info['room_name']}: {device_info['home_name']})"
+                        device_id: f"{device_info.get('name', 'unknown')} ({device_info.get('room_name', 'unknown')}: {device_info.get('home_name', 'unknown')})"
                         for device_id, device_info in valid_devices.items()
                         if self._is_valid_device(device_info, 'AMBIENT_LIGHT')
                     }),
@@ -59,8 +59,9 @@ class CyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
 
         except KeyError as e:
-            _LOGGER.error(f"Missing device property: {str(e)}")
-            raise InvalidCyncConfiguration(f"Device missing property: {str(e)}")
+            missing_key = str(e)
+            _LOGGER.error(f"KeyError: Missing key {missing_key} in device configuration")
+            raise InvalidCyncConfiguration(f"Device configuration is missing a key: {missing_key}")
 
         except Exception as e:
             _LOGGER.error(f"Unexpected error in configuration: {str(e)}")
