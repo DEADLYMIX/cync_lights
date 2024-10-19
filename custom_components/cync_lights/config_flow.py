@@ -24,6 +24,10 @@ class CyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         
         try:
             valid_devices = self._get_wifi_connected_devices()
+            
+            # Log the devices detected
+            _LOGGER.debug(f"Detected valid WiFi devices: {valid_devices}")
+
             if not valid_devices:
                 raise InvalidCyncConfiguration(
                     "Invalid or unsupported Cync configuration, please ensure there is at least one WiFi connected Cync device in your Home(s)."
@@ -38,17 +42,17 @@ class CyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     }),
                     vol.Optional("switches", description={"suggested_value": []}): cv.multi_select({
                         switch_id: f"{sw_info['name']} ({sw_info['room_name']}: {sw_info['home_name']})"
-                        for switch_id, sw_info in valid_devices
+                        for switch_id, sw_info in valid_devices.items()
                         if self._is_valid_device(sw_info, 'ONOFF')
                     }),
                     vol.Optional("motion_sensors", description={"suggested_value": []}): cv.multi_select({
                         device_id: f"{device_info['name']} ({device_info['room_name']}: {device_info['home_name']})"
-                        for device_id, device_info in valid_devices
+                        for device_id, device_info in valid_devices.items()
                         if self._is_valid_device(device_info, 'MOTION')
                     }),
                     vol.Optional("ambient_light_sensors", description={"suggested_value": []}): cv.multi_select({
                         device_id: f"{device_info['name']} ({device_info['room_name']}: {device_info['home_name']})"
-                        for device_id, device_info in valid_devices
+                        for device_id, device_info in valid_devices.items()
                         if self._is_valid_device(device_info, 'AMBIENT_LIGHT')
                     }),
                 }
@@ -70,11 +74,16 @@ class CyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         valid_devices = {}
         
         for device_id, device_info in devices.items():
-            if device_info.get('wifiMac') and device_info.get('wifiSsid'):
+            # Log each device's WiFi properties
+            _LOGGER.debug(f"Inspecting device: {device_info.get('name', 'unknown')}")
+            _LOGGER.debug(f"WiFi MAC: {device_info.get('wifiMac')}, WiFi SSID: {device_info.get('wifiSsid')}, Online: {device_info.get('is_online')}")
+            
+            # Check for WiFi MAC, SSID, and if the device is online
+            if device_info.get('wifiMac') and device_info.get('wifiSsid') and device_info.get('is_online', False):
                 valid_devices[device_id] = device_info
             else:
-                _LOGGER.warning(f"Device {device_info.get('name', 'unknown')} is missing WiFi configuration.")
-        
+                _LOGGER.warning(f"Device {device_info.get('name', 'unknown')} is missing WiFi configuration or is offline.")
+
         return valid_devices
 
     def _is_valid_device(self, device_info, property_key):
