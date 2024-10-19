@@ -29,20 +29,26 @@ class CyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.debug(f"Valid devices: {valid_devices}")
             _LOGGER.debug(f"Entry data: {self.entry.data}")
 
+            # Add checks for missing keys with logging
             if not valid_devices:
                 raise InvalidCyncConfiguration(
                     "Invalid or unsupported Cync configuration, please ensure there is at least one WiFi connected Cync device in your Home(s)."
                 )
 
             # Log the keys present in the entry data
-            _LOGGER.debug(f"Keys in entry data: {self.entry.data.keys()}")
+            if not self.entry.data:
+                _LOGGER.error(f"self.entry.data is None or empty: {self.entry.data}")
+
+            _LOGGER.debug(f"Keys in entry data: {self.entry.data.keys() if self.entry.data else 'No keys available'}")
 
             # Ensure the 'cync_config' key exists before accessing it
             if 'cync_config' not in self.entry.data:
+                _LOGGER.error(f"'cync_config' key missing from entry data: {self.entry.data}")
                 raise InvalidCyncConfiguration("Missing 'cync_config' in entry data")
 
             # Ensure the 'rooms' key exists in 'cync_config'
             if 'rooms' not in self.entry.data["cync_config"]:
+                _LOGGER.error(f"'rooms' key missing in 'cync_config': {self.entry.data['cync_config']}")
                 raise InvalidCyncConfiguration("Missing 'rooms' key in 'cync_config'")
 
             # Now we access 'rooms' data safely
